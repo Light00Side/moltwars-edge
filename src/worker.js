@@ -8,6 +8,14 @@ export default {
   },
 };
 
+function cors(resp) {
+  const headers = new Headers(resp.headers);
+  headers.set("Access-Control-Allow-Origin", "*");
+  headers.set("Access-Control-Allow-Methods", "GET,HEAD,POST,PUT,DELETE,OPTIONS");
+  headers.set("Access-Control-Allow-Headers", "*" );
+  return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers });
+}
+
 class MoltHub {
   constructor(state, env) {
     this.state = state;
@@ -19,13 +27,24 @@ class MoltHub {
 
   async fetch(request) {
     const url = new URL(request.url);
+    if (request.method === "OPTIONS") {
+      return cors(new Response(null, { status: 204 }));
+    }
     if (request.headers.get("Upgrade") === "websocket") {
       return this.handleWebSocket(request, url);
     }
     if (url.pathname === "/push") {
       return this.handlePush(request);
     }
-    return new Response("ok", { status: 200 });
+    // proxy HTTP to origin
+    const originUrl = new URL(url.pathname + url.search, this.env.ORIGIN_HTTP);
+    const init = {
+      method: request.method,
+      headers: request.headers,
+      body: ["GET", "HEAD"].includes(request.method) ? undefined : await request.clone().arrayBuffer(),
+    };
+    const resp = await fetch(originUrl.toString(), init);
+    return cors(resp);
   }
 
   async handlePush(request) {
