@@ -20,8 +20,7 @@ class MoltHub {
   constructor(state, env) {
     this.state = state;
     this.env = env;
-    this.worldClients = new Map(); // id -> {ws, view}
-    this.lastWorld = null; // full snapshot
+    this.worldClients = new Map(); // id -> ws
     this.nextId = 1;
   }
 
@@ -44,9 +43,10 @@ class MoltHub {
     if (!secret || secret !== this.env.MOLT_EDGE_SECRET) {
       return new Response("unauthorized", { status: 401 });
     }
-    const data = await request.json();
-    this.lastWorld = data;
-    this.broadcastWorld();
+    const data = await request.text();
+    for (const ws of this.worldClients.values()) {
+      if (ws.readyState === 1) ws.send(data);
+    }
     return new Response("ok");
   }
 
@@ -56,17 +56,7 @@ class MoltHub {
 
     if (url.pathname === "/ws/world") {
       const id = String(this.nextId++);
-      this.worldClients.set(id, { ws: server, view: null });
-      server.addEventListener("message", (evt) => {
-        try {
-          const data = JSON.parse(evt.data);
-          if (data.type === 'view') {
-            const { x, y, w, h } = data;
-            this.worldClients.set(id, { ws: server, view: { x, y, w, h } });
-            this.sendView(id);
-          }
-        } catch {}
-      });
+      this.worldClients.set(id, server);
       server.addEventListener("close", () => this.worldClients.delete(id));
       server.addEventListener("error", () => this.worldClients.delete(id));
       return new Response(null, { status: 101, webSocket: client });
@@ -74,47 +64,5 @@ class MoltHub {
 
     server.close();
     return new Response("bad path", { status: 404 });
-  }
-
-  sendView(id) {
-    const entry = this.worldClients.get(id);
-    if (!entry || !entry.view || !this.lastWorld) return;
-    const { ws, view } = entry;
-    const W = this.lastWorld.worldWidth || this.lastWorld.worldSize;
-    const H = this.lastWorld.worldHeight || this.lastWorld.worldSize;
-    const x = Math.max(0, Math.min(W - 1, Math.floor(view.x)));
-    const y = Math.max(0, Math.min(H - 1, Math.floor(view.y)));
-    const w = Math.max(1, Math.min(W - x, Math.floor(view.w)));
-    const h = Math.max(1, Math.min(H - y, Math.floor(view.h)));
-
-    const tiles2d = [];
-    const tiles = this.lastWorld.tiles || [];
-    for (let yy = 0; yy < h; yy++) {
-      const row = [];
-      for (let xx = 0; xx < w; xx++) {
-        row.push(tiles[(y + yy) * W + (x + xx)] || 0);
-      }
-      tiles2d.push(row);
-    }
-
-    const payload = {
-      type: 'world',
-      ok: true,
-      worldWidth: W,
-      worldHeight: H,
-      x, y, w, h,
-      tiles: tiles2d,
-      players: this.lastWorld.players || [],
-      animals: this.lastWorld.animals || [],
-      npcs: this.lastWorld.npcs || [],
-      chat: this.lastWorld.chat || [],
-    };
-    if (ws.readyState === 1) ws.send(JSON.stringify(payload));
-  }
-
-  broadcastWorld() {
-    for (const id of this.worldClients.keys()) {
-      this.sendView(id);
-    }
   }
 }
