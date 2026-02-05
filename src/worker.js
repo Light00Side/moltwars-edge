@@ -21,6 +21,7 @@ class MoltHub {
     this.state = state;
     this.env = env;
     this.worldClients = new Map(); // id -> ws
+    this.lastWorld = null;
     this.nextId = 1;
   }
 
@@ -52,6 +53,7 @@ class MoltHub {
       return new Response("unauthorized", { status: 401 });
     }
     const data = await request.text();
+    this.lastWorld = data;
     for (const ws of this.worldClients.values()) {
       if (ws.readyState === 1) ws.send(data);
     }
@@ -67,6 +69,9 @@ class MoltHub {
       this.worldClients.set(id, server);
       server.addEventListener("close", () => this.worldClients.delete(id));
       server.addEventListener("error", () => this.worldClients.delete(id));
+      if (this.lastWorld && server.readyState === 1) {
+        server.send(this.lastWorld);
+      }
       return new Response(null, { status: 101, webSocket: client });
     }
 
