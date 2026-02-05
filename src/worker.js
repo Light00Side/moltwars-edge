@@ -35,7 +35,15 @@ class MoltHub {
     if (url.pathname === "/push") {
       return this.handlePush(request);
     }
-    return cors(new Response("not found", { status: 404 }));
+    // proxy REST to origin (join/leaderboard/etc)
+    const originUrl = new URL(url.pathname + url.search, this.env.ORIGIN_HTTP);
+    const init = {
+      method: request.method,
+      headers: request.headers,
+      body: ["GET", "HEAD"].includes(request.method) ? undefined : await request.clone().arrayBuffer(),
+    };
+    const resp = await fetch(originUrl.toString(), init);
+    return cors(resp);
   }
 
   async handlePush(request) {
@@ -59,6 +67,31 @@ class MoltHub {
       this.worldClients.set(id, server);
       server.addEventListener("close", () => this.worldClients.delete(id));
       server.addEventListener("error", () => this.worldClients.delete(id));
+      return new Response(null, { status: 101, webSocket: client });
+    }
+
+    if (url.pathname === "/ws") {
+      const originUrl = `${this.env.ORIGIN_WS}?${url.searchParams.toString()}`;
+      const origin = new WebSocket(originUrl);
+
+      server.addEventListener("message", (evt) => {
+        if (origin.readyState === 1) origin.send(evt.data);
+      });
+
+      origin.addEventListener("message", (evt) => {
+        if (server.readyState === 1) server.send(evt.data);
+      });
+
+      const closeBoth = () => {
+        try { server.close(); } catch {}
+        try { origin.close(); } catch {}
+      };
+
+      server.addEventListener("close", closeBoth);
+      server.addEventListener("error", closeBoth);
+      origin.addEventListener("close", closeBoth);
+      origin.addEventListener("error", closeBoth);
+
       return new Response(null, { status: 101, webSocket: client });
     }
 
