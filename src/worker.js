@@ -4,18 +4,9 @@ export default {
   async fetch(request, env) {
     const id = env.MOLT_DO.idFromName("main");
     const stub = env.MOLT_DO.get(id);
-    const resp = await stub.fetch(request);
-    return cors(resp);
+    return stub.fetch(request);
   },
 };
-
-function cors(resp) {
-  const headers = new Headers(resp.headers);
-  headers.set("Access-Control-Allow-Origin", "*");
-  headers.set("Access-Control-Allow-Methods", "GET,HEAD,POST,PUT,DELETE,OPTIONS");
-  headers.set("Access-Control-Allow-Headers", "*");
-  return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers });
-}
 
 class MoltHubV2 {
   constructor(state, env) {
