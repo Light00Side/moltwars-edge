@@ -41,7 +41,10 @@ class MoltHubV2 {
     for (const ws of this.worldClients.values()) {
       if (ws.readyState === 1) ws.send(data);
     }
-    return new Response("ok");
+    return new Response(JSON.stringify({ ok: true, actions: [] }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
   }
 
   handleWebSocket(request, url) {
