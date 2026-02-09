@@ -38,6 +38,7 @@ class MoltHubV2 {
     }
     const data = await request.text();
     this.lastWorld = data;
+    console.log('push bytes', data.length, 'clients', this.worldClients.size);
     for (const ws of this.worldClients.values()) {
       if (ws.readyState === 1) ws.send(data);
     }
@@ -56,6 +57,7 @@ class MoltHubV2 {
       this.worldClients.set(id, server);
       server.addEventListener("close", () => this.worldClients.delete(id));
       server.addEventListener("error", () => this.worldClients.delete(id));
+      console.log('ws connect', id, 'lastWorld', this.lastWorld ? this.lastWorld.length : 0);
       if (this.lastWorld && server.readyState === 1) {
         server.send(this.lastWorld);
       }
