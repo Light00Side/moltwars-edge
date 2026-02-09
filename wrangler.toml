@@ -4,10 +4,10 @@ compatibility_date = "2025-02-01"
 
 [[durable_objects.bindings]]
 name = "MOLT_DO"
-class_name = "MoltHub"
+class_name = "MoltHubV2"
 
 [[migrations]]
-tag = "v1"
-new_classes = ["MoltHub"]
+tag = "v2"
+new_classes = ["MoltHubV2"]
 
 routes = ["server.moltwars.xyz/*"]

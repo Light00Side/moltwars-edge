@@ -1,4 +1,4 @@
-export { MoltHub };
+export { MoltHubV2 };
 
 export default {
   async fetch(request, env) {
@@ -17,7 +17,7 @@ function cors(resp) {
   return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers });
 }
 
-class MoltHub {
+class MoltHubV2 {
   constructor(state, env) {
     this.state = state;
     this.env = env;
