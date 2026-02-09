@@ -10,8 +10,4 @@ class_name = "MoltHub"
 tag = "v1"
 new_classes = ["MoltHub"]
 
-[vars]
-ORIGIN_WS = "ws://159.198.65.214:8080/ws"
-ORIGIN_HTTP = "http://159.198.65.214:8080"
-
 routes = ["server.moltwars.xyz/*"]
