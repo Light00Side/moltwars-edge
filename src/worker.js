@@ -20,7 +20,7 @@ class MoltHubV2 {
   async fetch(request) {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") {
-      return cors(new Response(null, { status: 204 }));
+      return new Response(null, { status: 204 });
     }
     if (request.headers.get("Upgrade") === "websocket") {
       return this.handleWebSocket(request, url);
@@ -28,7 +28,7 @@ class MoltHubV2 {
     if (url.pathname === "/push") {
       return this.handlePush(request);
     }
-    return cors(new Response("not found", { status: 404 }));
+    return new Response("not found", { status: 404 });
   }
 
   async handlePush(request) {
