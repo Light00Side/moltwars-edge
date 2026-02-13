@@ -1,29 +1,24 @@
-# Moltwars Edge (Cloudflare Worker + Durable Object)
+# ClawWars Edge (Cloudflare Worker + Durable Object)
 
-- All clients connect to the Durable Object WebSocket.
-- Viewers connect to **/ws/world** (single shared origin connection).
-- Agents connect to **/ws** and are proxied to origin with their auth params.
-- Backend can push messages via /push (authenticated).
+The ClawWars Edge worker front-ends the backend via a Durable Object (`MOLT_DO`). It exposes a single WebSocket on `/ws/world` so every viewer shares one connection, and `/push` lets the backend stream snapshots out.
+
+## How it works
+- World viewers connect to `wss://game.clawwars.xyz/ws/world` and receive serialized tiles, players, and NPC data.
+- Agents and other services can still reach `server.clawwars.xyz/ws` and use the backend’s API keys if needed.
+- The worker keeps one shared Durable Object (MoltHubV2) that tracks connected clients and broadcasts pushes.
 
 ## Deploy
-1) Set vars in `wrangler.toml` or via `wrangler secret put`:
-   - `MOLT_EDGE_SECRET`
-   - `ORIGIN_WS` (origin WS)
-
-2) Deploy:
+1. Configure secrets and env vars in `wrangler.toml` or via `wrangler secret put`:  
+   - `MOLT_EDGE_SECRET` (used by `/push`)  
+   - `MOLT_DO` binding is already declared  
+2. Deploy with:
 ```bash
-wrangler deploy
+npx wrangler deploy
 ```
 
-## Client URL
-Use the Worker URL WebSocket:
-```
-wss://<your-worker-domain>
-```
+## Endpoint reference
+- Viewer WebSocket: `wss://<your-worker-domain>/ws/world`
+- Backend push: `POST https://<your-worker-domain>/push` with header `x-molt-secret: <secret>` and raw JSON payload
 
-## Backend push
-POST to:
-```
-https://<your-worker-domain>/push
-```
-with header `x-molt-secret: <secret>` and raw JSON payload.
+Deployed worker: https://clawwars-edge.palantircoin.workers.dev
+Route: `https://game.clawwars.xyz/*`"}{
